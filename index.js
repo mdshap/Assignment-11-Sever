@@ -25,15 +25,32 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
+    //CONNECT TO MONGODB
     await client.connect();
     console.log("Connected");
 
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
     const db = client.db("ScholarshipStream");
 
-    //USERS COLLECTION RELATED APIs
+    //USERS RELATED APIs
     const usersCollection = db.collection("Users");
     app.post("/users", async (req, res) => {
+
       const newUser = req.body;
+
+      const existingUser = await usersCollection.findOne({
+        email: newUser.email,
+      });
+
+      if (existingUser) {
+        return res.send({
+          message: "User already exists",
+        });
+      }
+
       const result = await usersCollection.insertOne(newUser);
       res.send(result);
     });
@@ -44,14 +61,20 @@ async function run() {
       res.send(result);
     });
 
-    const scholarshipsCollection = db.collection("Scholarships");
-    const applicationsCollection = db.collection("Applications");
-    const reviewsCollection = db.collection("Reviews");
+    app.get("/users/:email", async (req, res)=>{
+        const email = req.params.email;
+        const user = await usersCollection.findOne({email})
+        res.send(user);
+    })
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    //SCHOLARSHIP RELATED APIs
+    const scholarshipsCollection = db.collection("Scholarships");
+
+    //APPLICATION RELATED APIs
+    const applicationsCollection = db.collection("Applications");
+
+    //REVIEWS RELATED APIs
+    const reviewsCollection = db.collection("Reviews");
   } catch {
   } finally {
   }
