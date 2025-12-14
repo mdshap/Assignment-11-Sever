@@ -38,7 +38,6 @@ async function run() {
     //USERS RELATED APIs
     const usersCollection = db.collection("Users");
     app.post("/users", async (req, res) => {
-
       const newUser = req.body;
 
       const existingUser = await usersCollection.findOne({
@@ -61,14 +60,39 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/:email", async (req, res)=>{
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email });
+      res.send(user);
+    });
+
+    app.patch("/users/:email", async (req, res)=>{
         const email = req.params.email;
-        const user = await usersCollection.findOne({email})
-        res.send(user);
+        const { role } = req.body;
+
+        const updatedRole = {
+            $set: {role}
+        }
+        const result = await usersCollection.updateOne({email}, updatedRole)
+        res.send(result)
     })
 
     //SCHOLARSHIP RELATED APIs
     const scholarshipsCollection = db.collection("Scholarships");
+
+    app.post("/scholarships", async (req, res) => {
+      const newScholarship = req.body;
+      console.log("BODY:", req.body);
+      newScholarship.createdAt = new Date();
+      const result = await scholarshipsCollection.insertOne(newScholarship);
+      res.send(result);
+    });
+
+    app.get('/scholarships', async (req, res)=>{
+        const scholarships = scholarshipsCollection.find()
+        const result = await scholarships.toArray()
+        res.send(result)
+    })
 
     //APPLICATION RELATED APIs
     const applicationsCollection = db.collection("Applications");
