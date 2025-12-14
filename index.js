@@ -66,33 +66,65 @@ async function run() {
       res.send(user);
     });
 
-    app.patch("/users/:email", async (req, res)=>{
-        const email = req.params.email;
-        const { role } = req.body;
+    app.patch("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const { role } = req.body;
 
-        const updatedRole = {
-            $set: {role}
-        }
-        const result = await usersCollection.updateOne({email}, updatedRole)
-        res.send(result)
-    })
+      const updatedRole = {
+        $set: { role },
+      };
+      const result = await usersCollection.updateOne({ email }, updatedRole);
+      res.send(result);
+    });
+
+    app.delete("/users/:email", async (req, res) => {
+      const email = req.params.email;
+
+      const query = { email };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //SCHOLARSHIP RELATED APIs
     const scholarshipsCollection = db.collection("Scholarships");
 
     app.post("/scholarships", async (req, res) => {
       const newScholarship = req.body;
-      console.log("BODY:", req.body);
       newScholarship.createdAt = new Date();
       const result = await scholarshipsCollection.insertOne(newScholarship);
       res.send(result);
     });
 
-    app.get('/scholarships', async (req, res)=>{
-        const scholarships = scholarshipsCollection.find()
-        const result = await scholarships.toArray()
-        res.send(result)
-    })
+    app.get("/scholarships", async (req, res) => {
+      const { search, category, order } = req.query;
+      const query = {};
+
+      if (search) {
+        query.$or = [
+          { scholarshipName: { $regex: search, $options: "i" } },
+          { universityName: { $regex: search, $options: "i" } },
+          { degree: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (category) {
+        query.scholarshipCategory = category;
+      }
+
+      const scholarships = scholarshipsCollection.find(query);
+      const result = await scholarships.toArray();
+
+      if (order === "ascending") {
+        result.sort(
+          (a, b) => Number(a.applicationFees) - Number(b.applicationFees)
+        );
+      } else if (order === "descending") {
+        result.sort(
+          (a, b) => Number(b.applicationFees) - Number(a.applicationFees)
+        );
+      }
+      res.send(result);
+    });
 
     //APPLICATION RELATED APIs
     const applicationsCollection = db.collection("Applications");
