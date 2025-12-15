@@ -201,11 +201,16 @@ async function run() {
 
         const newApplication = {
           scholarshipId: application.scholarshipId,
+          scholarshipName: application.scholarshipName,
+
           userId: application.userId,
           userName: application.userName,
           userEmail: application.userEmail,
 
           universityName: application.universityName,
+          universityCity: application.universityCity,
+          universityCountry: application.universityCountry,
+
           scholarshipCategory: application.scholarshipCategory,
           degree: application.degree,
 
@@ -213,7 +218,7 @@ async function run() {
           serviceCharge: application.serviceCharge,
 
           applicationStatus: "pending",
-          paymentStatus: application.paymentStatus || "unpaid",
+          paymentStatus: application.paymentStatus || "UNPAID",
 
           applicationDate: new Date(),
           feedback: "",
@@ -240,12 +245,108 @@ async function run() {
       const userID = req.params.userID;
       const query = { userId: userID };
       const filteredApplication = applicationsCollection.find(query);
-      const result = await filteredApplication.toArray()
+      const result = await filteredApplication.toArray();
+      res.send(result);
+    });
+
+    app.delete("/applications/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await applicationsCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      res.send(result);
+    });
+
+    app.patch("/applications/:id", async (req, res) => {
+      const id = req.params.id;
+      const { userName, userEmail } = req.body;
+
+      const result = await applicationsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            userName,
+            userEmail,
+          },
+        }
+      );
+
       res.send(result);
     });
 
     //REVIEWS RELATED APIs
     const reviewsCollection = db.collection("Reviews");
+
+    app.post("/reviews", async (req, res) => {
+      const review = req.body;
+
+      const newReview = {
+        applicationId: review.applicationId,
+        scholarshipId: review.scholarshipId,
+        scholarshipName: review.scholarshipName,
+
+        universityName: review.universityName,
+        universityCity: review.universityCity,
+        universityCountry: review.universityCountry,
+
+        userId: review.userId,
+        userName: review.userName,
+        userEmail: review.userEmail,
+        userImage: review.userImage,
+
+        ratingPoint: review.rating,
+        reviewComment: review.comment,
+
+        reviewDate: new Date(),
+      };
+
+      const result = await reviewsCollection.insertOne(newReview);
+      res.send(result);
+    });
+
+    app.get("/reviews", async (req, res) => {
+      const reviews = await reviewsCollection.find().toArray();
+      res.send(reviews);
+    });
+
+    app.get("/reviews/:userID", async (req, res) => {
+      const userId = req.params.userID;
+
+      const reviews = await reviewsCollection.find({ userId }).toArray();
+
+      res.send(reviews);
+    });
+
+    app.delete("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await reviewsCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+
+      res.send(result);
+    });
+
+    app.patch("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const { ratingPoint, reviewComment } = req.body;
+
+      const result = await reviewsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            ratingPoint,
+            reviewComment,
+            reviewDate: new Date(),
+          },
+        }
+      );
+
+      res.send(result);
+    });
+    
   } catch {
   } finally {
   }
