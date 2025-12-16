@@ -185,7 +185,7 @@ async function run() {
       res.send(result);
     });
 
-    
+
     //APPLICATION RELATED APIs
     const applicationsCollection = db.collection("Applications");
     app.post("/applications", async (req, res) => {
@@ -370,8 +370,10 @@ async function run() {
 
       res.send(result);
     });
-  } catch {
-  } finally {
+  } 
+  catch {
+  } 
+  finally {
   }
 }
 run().catch(console.dir);
