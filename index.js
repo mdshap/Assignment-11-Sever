@@ -185,6 +185,7 @@ async function run() {
       res.send(result);
     });
 
+    
     //APPLICATION RELATED APIs
     const applicationsCollection = db.collection("Applications");
     app.post("/applications", async (req, res) => {
@@ -330,6 +331,14 @@ async function run() {
       const userId = req.params.userID;
 
       const reviews = await reviewsCollection.find({ userId }).toArray();
+
+      res.send(reviews);
+    });
+
+    app.get("/reviews/scholarship/:id", async (req, res) => {
+      const scholarshipId = req.params.id;
+
+      const reviews = await reviewsCollection.find({ scholarshipId }).toArray();
 
       res.send(reviews);
     });
