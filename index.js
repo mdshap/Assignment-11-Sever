@@ -103,6 +103,23 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/users/profile/:id", async (req, res) => {
+      const id = req.params.id;
+      const { name, photoURL } = req.body;
+
+      const result = await usersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            name,
+            photoURL,
+          },
+        }
+      );
+
+      res.send(result);
+    });
+
     app.delete("/users/:email", async (req, res) => {
       const email = req.params.email;
 
@@ -184,7 +201,6 @@ async function run() {
       });
       res.send(result);
     });
-
 
     //APPLICATION RELATED APIs
     const applicationsCollection = db.collection("Applications");
@@ -370,10 +386,8 @@ async function run() {
 
       res.send(result);
     });
-  } 
-  catch {
-  } 
-  finally {
+  } catch {
+  } finally {
   }
 }
 run().catch(console.dir);
