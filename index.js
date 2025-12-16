@@ -261,16 +261,20 @@ async function run() {
 
     app.patch("/applications/:id", async (req, res) => {
       const id = req.params.id;
-      const { userName, userEmail } = req.body;
+
+      const { userName, userEmail, applicationStatus, feedback } = req.body;
+
+      const updateDoc = { $set: {} };
+
+      if (userName !== undefined) updateDoc.$set.userName = userName;
+      if (userEmail !== undefined) updateDoc.$set.userEmail = userEmail;
+      if (applicationStatus !== undefined)
+        updateDoc.$set.applicationStatus = applicationStatus;
+      if (feedback !== undefined) updateDoc.$set.feedback = feedback;
 
       const result = await applicationsCollection.updateOne(
         { _id: new ObjectId(id) },
-        {
-          $set: {
-            userName,
-            userEmail,
-          },
-        }
+        updateDoc
       );
 
       res.send(result);
@@ -281,6 +285,17 @@ async function run() {
 
     app.post("/reviews", async (req, res) => {
       const review = req.body;
+
+      const existingReview = await reviewsCollection.findOne({
+        scholarshipId: review.scholarshipId,
+        userId: review.userId,
+      });
+
+      if (existingReview) {
+        return res.status(409).send({
+          message: "You have already reviewed this scholarship",
+        });
+      }
 
       const newReview = {
         applicationId: review.applicationId,
@@ -346,7 +361,6 @@ async function run() {
 
       res.send(result);
     });
-    
   } catch {
   } finally {
   }
