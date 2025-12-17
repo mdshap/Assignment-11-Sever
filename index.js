@@ -11,6 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
+console.log("Mongo URI", process.env.MONGODB_URI);
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -138,34 +139,79 @@ async function run() {
     });
 
     app.get("/scholarships", async (req, res) => {
-      const { search, category, order } = req.query;
-      const query = {};
+      try {
+        const { search, category, order, page, limit } = req.query;
 
-      if (search) {
-        query.$or = [
-          { scholarshipName: { $regex: search, $options: "i" } },
-          { universityName: { $regex: search, $options: "i" } },
-          { degree: { $regex: search, $options: "i" } },
+        const matchStage = {};
+
+        if (search) {
+          matchStage.$or = [
+            { scholarshipName: { $regex: search, $options: "i" } },
+            { universityName: { $regex: search, $options: "i" } },
+            { degree: { $regex: search, $options: "i" } },
+          ];
+        }
+
+        if (category) {
+          matchStage.scholarshipCategory = category;
+        }
+
+        const sortOrder = order === "descending" ? -1 : 1;
+
+        const pipeline = [
+          { $match: matchStage },
+
+          {
+            $addFields: {
+              applicationFeesNumber: {
+                $toDouble: "$applicationFees",
+              },
+            },
+          },
+
+          {
+            $sort: {
+              applicationFeesNumber: sortOrder,
+            },
+          },
         ];
-      }
 
-      if (category) {
-        query.scholarshipCategory = category;
-      }
+        if (page && limit) {
+          const pageNumber = Number(page);
+          const limitNumber = Number(limit);
+          const skip = (pageNumber - 1) * limitNumber;
 
-      const filteredScholarships = scholarshipsCollection.find(query);
-      const result = await filteredScholarships.toArray();
+          const countPipeline = [{ $match: matchStage }, { $count: "total" }];
 
-      if (order === "ascending") {
-        result.sort(
-          (a, b) => Number(a.applicationFees) - Number(b.applicationFees)
-        );
-      } else if (order === "descending") {
-        result.sort(
-          (a, b) => Number(b.applicationFees) - Number(a.applicationFees)
-        );
+          const countResult = await scholarshipsCollection
+            .aggregate(countPipeline)
+            .toArray();
+
+          const total = countResult[0]?.total || 0;
+
+          pipeline.push({ $skip: skip }, { $limit: limitNumber });
+
+          const data = await scholarshipsCollection
+            .aggregate(pipeline)
+            .toArray();
+
+          return res.send({
+            data,
+            total,
+            totalPages: Math.ceil(total / limitNumber),
+            currentPage: pageNumber,
+          });
+        }
+
+        const result = await scholarshipsCollection
+          .aggregate(pipeline)
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.send({ message: "Failed to fetch scholarships" });
       }
-      res.send(result);
     });
 
     app.get("/scholarships/:id", async (req, res) => {
@@ -188,7 +234,7 @@ async function run() {
       const result = await scholarshipsCollection.updateOne(filter, updateDoc);
 
       if (result.matchedCount === 0) {
-        return res.status(404).send({ message: "Scholarship not found" });
+        return res.send({ message: "Scholarship not found" });
       }
 
       res.send(result);
